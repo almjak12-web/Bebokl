@@ -154,7 +154,9 @@
       from { opacity: 0; transform: translateY(8px); }
       to { opacity: 1; transform: translateY(0); }
     }
+    .pdf-exporting .no-print { display: none !important; }
     @media print {
+      .no-print { display: none !important; }
       body * { visibility: hidden; }
       #pdfExportContainer, #pdfExportContainer * { visibility: visible; }
       #pdfExportContainer {
@@ -2224,12 +2226,13 @@
         }));
 
         state.sims.forEach((sim) => {
-          sim.currentDayRecv = 0;
+          sim.currentDayRecv = Math.max(0, parseNum(sim.nextDayRecv));
           sim.nextDayRecv = 0;
-          sim.currentDaySend = 0;
+          sim.currentDaySend = Math.max(0, parseNum(sim.nextDaySend));
           sim.nextDaySend = 0;
           sim.openingCarry = Math.max(0, parseNum(sim.balance));
         });
+        state.dayMode = 'current';
 
         const stamp = nowStamp();
         if (!Array.isArray(state.logs.expenses)) state.logs.expenses = [];
@@ -3133,6 +3136,13 @@
         setTimeout(() => document.getElementById('newEgpClientName').focus(), 50);
       };
 
+      function formatEgpStateLabel(signedBal) {
+        const b = parseNum(signedBal);
+        if (b > 0) return `عليّ ${fmt(b)}`;
+        if (b < 0) return `ليّ ${fmt(Math.abs(b))}`;
+        return '0.00';
+      }
+
       window.saveEgpClient = function (e) {
         e.preventDefault();
         pushUndoStep('إضافة خانة مصري');
@@ -3141,7 +3151,21 @@
         const rawAmt = Math.abs(parseNum(document.getElementById('newEgpClientInit').value));
         if (!name) return;
         const signedBal = side === 'alay' ? rawAmt : -rawAmt;
-        state.egpClients.push({ id: uid('egpc'), name, balance: signedBal });
+        const newClient = { id: uid('egpc'), name, balance: signedBal };
+        state.egpClients.push(newClient);
+        const stamp = nowStamp();
+        state.logs.egp.unshift({
+          id: uid('egptx'),
+          clientId: newClient.id,
+          clientName: name,
+          side,
+          amount: rawAmt,
+          balanceBefore: 0,
+          balanceAfter: signedBal,
+          note: `إضافة خانة جديدة (كان 0.00 ← أصبح ${formatEgpStateLabel(signedBal)})`,
+          dateStr: stamp.dateStr,
+          fullTime: stamp.full
+        });
         saveState();
         window.closeModal('egpClientModal');
         renderAll();
@@ -3164,11 +3188,38 @@
         }
         const signedBal = side === 'alay' ? rawAmt : -rawAmt;
         const existing = state.egpClients.find((c) => c.name.trim().toLowerCase() === name.toLowerCase());
+        const stamp = nowStamp();
         if (existing) {
+          const oldBal = parseNum(existing.balance);
           existing.balance = signedBal;
+          state.logs.egp.unshift({
+            id: uid('egptx'),
+            clientId: existing.id,
+            clientName: existing.name,
+            side,
+            amount: rawAmt,
+            balanceBefore: oldBal,
+            balanceAfter: signedBal,
+            note: `كان ${formatEgpStateLabel(oldBal)} ← أصبح ${formatEgpStateLabel(signedBal)}`,
+            dateStr: stamp.dateStr,
+            fullTime: stamp.full
+          });
           showToast(`تم تحديث رصيد ${existing.name}`);
         } else {
-          state.egpClients.push({ id: uid('egpc'), name, balance: signedBal });
+          const created = { id: uid('egpc'), name, balance: signedBal };
+          state.egpClients.push(created);
+          state.logs.egp.unshift({
+            id: uid('egptx'),
+            clientId: created.id,
+            clientName: name,
+            side,
+            amount: rawAmt,
+            balanceBefore: 0,
+            balanceAfter: signedBal,
+            note: `إضافة خانة (كان 0.00 ← أصبح ${formatEgpStateLabel(signedBal)})`,
+            dateStr: stamp.dateStr,
+            fullTime: stamp.full
+          });
           showToast(`تم إضافة خانة: ${name}`);
         }
         nameEl.value = '';
@@ -3201,10 +3252,11 @@
           clientName: client.name,
           side,
           amount: rawAmt,
-          note: `تحديث رصيد (كان ${fmt(Math.abs(oldBal))})`,
+          balanceBefore: oldBal,
+          balanceAfter: newBal,
+          note: `كان ${formatEgpStateLabel(oldBal)} ← أصبح ${formatEgpStateLabel(newBal)}`,
           dateStr: stamp.dateStr,
-          fullTime: stamp.full,
-          balanceAfter: newBal
+          fullTime: stamp.full
         });
 
         saveState();
@@ -3314,7 +3366,24 @@
         const plat = state.usdtPlatforms.find((p) => p.id === platId);
         if (!plat) return;
         pushUndoStep(`تحديث منصة ${plat.name}`);
+        const oldBal = parseNum(plat.balance);
         plat.balance = val;
+        const stamp = nowStamp();
+        state.logs.usdt.unshift({
+          id: uid('utx'),
+          clientId: plat.id,
+          clientName: `منصة: ${plat.name}`,
+          kind: 'platform_update',
+          amountInput: val,
+          rate: 0,
+          usdtDelta: val - oldBal,
+          balanceBefore: oldBal,
+          balanceAfter: val,
+          note: `كان ${fmt(oldBal, 2)} USDT ← أصبح ${fmt(val, 2)} USDT`,
+          dateStr: stamp.dateStr,
+          fullTime: stamp.full,
+          netAfter: val
+        });
         saveState();
         renderDashboard();
         renderUsdtPage();
@@ -3327,7 +3396,24 @@
         const plat = state.usdtPlatforms.find((p) => p.id === platId);
         if (!plat) return;
         pushUndoStep(`مسح منصة ${plat.name}`);
+        const oldBal = parseNum(plat.balance);
         plat.balance = 0;
+        const stamp = nowStamp();
+        state.logs.usdt.unshift({
+          id: uid('utx'),
+          clientId: plat.id,
+          clientName: `منصة: ${plat.name}`,
+          kind: 'platform_update',
+          amountInput: 0,
+          rate: 0,
+          usdtDelta: -oldBal,
+          balanceBefore: oldBal,
+          balanceAfter: 0,
+          note: `تصفير منصة (كان ${fmt(oldBal, 2)} USDT ← أصبح 0.00 USDT)`,
+          dateStr: stamp.dateStr,
+          fullTime: stamp.full,
+          netAfter: 0
+        });
         const input = document.getElementById(`platBal_${platId}`);
         if (input) input.value = '';
         saveState();
@@ -3349,12 +3435,31 @@
 
         if (!Array.isArray(state.usdtQuickBoxes)) state.usdtQuickBoxes = [];
         const label = rawName || (side === 'li' ? `ليّ USDT #${state.usdtQuickBoxes.length + 1}` : `عليّ USDT #${state.usdtQuickBoxes.length + 1}`);
+        const signedAfter = side === 'alay' ? -val : val;
 
-        state.usdtQuickBoxes.push({
+        const boxObj = {
           id: uid('uqb'),
           name: label,
           side,
           balance: val
+        };
+        state.usdtQuickBoxes.push(boxObj);
+
+        const stamp = nowStamp();
+        state.logs.usdt.unshift({
+          id: uid('utx'),
+          clientId: boxObj.id,
+          clientName: label,
+          kind: 'quick_box_update',
+          amountInput: val,
+          rate: 0,
+          usdtDelta: signedAfter,
+          balanceBefore: 0,
+          balanceAfter: signedAfter,
+          note: `إضافة خانة (كان 0.00 ← أصبح ${side === 'alay' ? 'عليّ' : 'ليّ'} ${fmt(val, 2)} USDT)`,
+          dateStr: stamp.dateStr,
+          fullTime: stamp.full,
+          netAfter: signedAfter
         });
 
         if (nameEl) nameEl.value = '';
@@ -3380,9 +3485,31 @@
           : (sideOverride || (sideSel ? sideSel.value : box.side));
         const val = Math.abs(parsedInput);
 
+        const oldSigned = box.side === 'alay' ? -Math.abs(parseNum(box.balance)) : Math.abs(parseNum(box.balance));
+        const newSigned = side === 'alay' ? -val : val;
+        const oldLabel = oldSigned < 0 ? `عليّ ${fmt(Math.abs(oldSigned), 2)}` : oldSigned > 0 ? `ليّ ${fmt(oldSigned, 2)}` : '0.00';
+        const newLabel = newSigned < 0 ? `عليّ ${fmt(Math.abs(newSigned), 2)}` : newSigned > 0 ? `ليّ ${fmt(newSigned, 2)}` : '0.00';
+
         box.side = side === 'alay' ? 'alay' : 'li';
         box.balance = val;
         if (input) input.value = '';
+
+        const stamp = nowStamp();
+        state.logs.usdt.unshift({
+          id: uid('utx'),
+          clientId: box.id,
+          clientName: box.name,
+          kind: 'quick_box_update',
+          amountInput: val,
+          rate: 0,
+          usdtDelta: newSigned - oldSigned,
+          balanceBefore: oldSigned,
+          balanceAfter: newSigned,
+          note: `كان ${oldLabel} USDT ← أصبح ${newLabel} USDT`,
+          dateStr: stamp.dateStr,
+          fullTime: stamp.full,
+          netAfter: newSigned
+        });
 
         saveState();
         renderDashboard();
@@ -3482,7 +3609,8 @@
           usdtDelta = -amount;
         }
 
-        client.usdtNet = parseNum(client.usdtNet) + usdtDelta;
+        const netBefore = parseNum(client.usdtNet);
+        client.usdtNet = netBefore + usdtDelta;
 
         const stamp = nowStamp();
         state.logs.usdt.unshift({
@@ -3493,6 +3621,7 @@
           amountInput: amount,
           rate: rateUsed,
           usdtDelta,
+          netBefore,
           dateStr: stamp.dateStr,
           fullTime: stamp.full,
           netAfter: client.usdtNet
@@ -4035,36 +4164,45 @@
               <thead>
                 <tr class="border-b border-slate-700 text-slate-400">
                   <th class="py-2 px-2">الوقت</th>
-                  <th class="py-2 px-2">العميل</th>
+                  <th class="py-2 px-2">الاسم</th>
                   <th class="py-2 px-2">الجهة</th>
-                  <th class="py-2 px-2">المبلغ</th>
-                  <th class="py-2 px-2">البيان</th>
-                  <th class="py-2 px-2">إجراء</th>
+                  <th class="py-2 px-2">الرصيد الجديد</th>
+                  <th class="py-2 px-2">كان قبل التحديث</th>
+                  <th class="py-2 px-2">أصبح بعد التحديث</th>
+                  <th class="py-2 px-2 no-print">إجراء</th>
                 </tr>
               </thead>
               <tbody>
-                ${rows.length === 0 ? `<tr><td colspan="6" class="py-5 text-center text-slate-400">لا توجد معاملات</td></tr>` : rows.map((r) => `
-                  <tr class="border-b border-slate-800/80">
-                    <td class="py-2 px-2 whitespace-nowrap">${r.fullTime}</td>
-                    <td class="py-2 px-2 font-bold">${r.clientName}</td>
-                    <td class="py-2 px-2 font-bold ${r.side === 'li' ? 'text-emerald-400' : 'text-rose-400'}">${r.side === 'li' ? 'ليّ' : 'عليّ'}</td>
-                    <td class="py-2 px-2 font-extrabold">${fmt(r.amount)}</td>
-                    <td class="py-2 px-2">${r.note || '-'}</td>
-                    <td class="py-2 px-2 whitespace-nowrap space-x-1 space-x-reverse">
-                      <button type="button" onclick="window.openEditTx('egp', '${r.id}')" class="bg-amber-500/20 text-amber-300 px-2 py-1 rounded">تعديل</button>
-                      <button type="button" onclick="window.openDeleteTx('egp', '${r.id}')" class="bg-rose-500/20 text-rose-300 px-2 py-1 rounded">حذف</button>
-                    </td>
-                  </tr>
-                `).join('')}
+                ${rows.length === 0 ? `<tr><td colspan="7" class="py-5 text-center text-slate-400">لا توجد معاملات</td></tr>` : rows.map((r) => {
+                  const hasBefore = r.balanceBefore !== undefined && r.balanceBefore !== null;
+                  const beforeTxt = hasBefore ? formatEgpStateLabel(r.balanceBefore) : (r.note || '-');
+                  const afterTxt = (r.balanceAfter !== undefined && r.balanceAfter !== null)
+                    ? formatEgpStateLabel(r.balanceAfter)
+                    : `${r.side === 'li' ? 'ليّ' : 'عليّ'} ${fmt(r.amount)}`;
+                  return `
+                    <tr class="border-b border-slate-800/80">
+                      <td class="py-2 px-2 whitespace-nowrap">${r.fullTime}</td>
+                      <td class="py-2 px-2 font-bold">${r.clientName}</td>
+                      <td class="py-2 px-2 font-bold ${r.side === 'li' ? 'text-emerald-400' : 'text-rose-400'}">${r.side === 'li' ? 'ليّ' : 'عليّ'}</td>
+                      <td class="py-2 px-2 font-extrabold">${fmt(r.amount)} ج.م</td>
+                      <td class="py-2 px-2 text-slate-300">${beforeTxt}</td>
+                      <td class="py-2 px-2 font-bold text-sky-300">${afterTxt}</td>
+                      <td class="py-2 px-2 whitespace-nowrap space-x-1 space-x-reverse no-print">
+                        <button type="button" onclick="window.openEditTx('egp', '${r.id}')" class="bg-amber-500/20 text-amber-300 px-2 py-1 rounded">تعديل</button>
+                        <button type="button" onclick="window.openDeleteTx('egp', '${r.id}')" class="bg-rose-500/20 text-rose-300 px-2 py-1 rounded">حذف</button>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
               </tbody>
             </table>
           `;
         } else if (tab === 'usdt') {
           const rows = state.logs.usdt.filter((r) =>
-            matchItem(`${r.clientName} ${r.kind} ${r.amountInput} ${r.usdtDelta}`, r.dateStr)
+            matchItem(`${r.clientName} ${r.kind} ${r.amountInput} ${r.usdtDelta} ${r.rate || ''} ${r.note || ''}`, r.dateStr)
           );
           const matchedUsdtClient = q ? state.usdtClients.find((c) => c.name.toLowerCase().includes(q)) : null;
-          titleEl.textContent = matchedUsdtClient ? `كشف حساب عميل USDT: ${matchedUsdtClient.name}` : 'سجل معاملات الـ USDT';
+          titleEl.textContent = matchedUsdtClient ? `كشف حساب عميل USDT: ${matchedUsdtClient.name}` : 'سجل معاملات الـ USDT والمنصات';
           metaEl.textContent = `عدد الحركات: ${rows.length}`;
           const sumDelta = rows.reduce((a, b) => a + parseNum(b.usdtDelta), 0);
           badgeEl.textContent = `صافي الحركات: ${fmt(sumDelta, 2)} USDT`;
@@ -4073,7 +4211,9 @@
             egp_send: 'إرسال مصري',
             egp_recv: 'استقبال مصري',
             free_send: 'إرسال USDT حر',
-            free_recv: 'استقبال USDT حر'
+            free_recv: 'استقبال USDT حر',
+            platform_update: 'تحديث رصيد منصة',
+            quick_box_update: 'تحديث خانة مباشرة'
           };
 
           wrapper.innerHTML = summaryBlockHtml + `
@@ -4081,27 +4221,52 @@
               <thead>
                 <tr class="border-b border-slate-700 text-slate-400">
                   <th class="py-2 px-2">الوقت</th>
-                  <th class="py-2 px-2">العميل</th>
+                  <th class="py-2 px-2">العميل / المنصة</th>
                   <th class="py-2 px-2">النوع</th>
-                  <th class="py-2 px-2">المدخل</th>
-                  <th class="py-2 px-2">الأثر USDT</th>
-                  <th class="py-2 px-2">إجراء</th>
+                  <th class="py-2 px-2">تفاصيل العملية (المصري ÷ السعر = الناتج)</th>
+                  <th class="py-2 px-2">الرصيد (كان ← أصبح)</th>
+                  <th class="py-2 px-2 no-print">إجراء</th>
                 </tr>
               </thead>
               <tbody>
-                ${rows.length === 0 ? `<tr><td colspan="6" class="py-5 text-center text-slate-400">لا توجد معاملات USDT</td></tr>` : rows.map((r) => `
-                  <tr class="border-b border-slate-800/80">
-                    <td class="py-2 px-2 whitespace-nowrap">${r.fullTime}</td>
-                    <td class="py-2 px-2 font-bold">${r.clientName}</td>
-                    <td class="py-2 px-2">${kindLabel[r.kind] || r.kind}</td>
-                    <td class="py-2 px-2">${fmt(r.amountInput, 2)}</td>
-                    <td class="py-2 px-2 font-extrabold ${parseNum(r.usdtDelta) >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${fmt(r.usdtDelta, 2)}</td>
-                    <td class="py-2 px-2 whitespace-nowrap space-x-1 space-x-reverse">
-                      <button type="button" onclick="window.openEditTx('usdt', '${r.id}')" class="bg-amber-500/20 text-amber-300 px-2 py-1 rounded">تعديل</button>
-                      <button type="button" onclick="window.openDeleteTx('usdt', '${r.id}')" class="bg-rose-500/20 text-rose-300 px-2 py-1 rounded">حذف</button>
-                    </td>
-                  </tr>
-                `).join('')}
+                ${rows.length === 0 ? `<tr><td colspan="6" class="py-5 text-center text-slate-400">لا توجد معاملات USDT</td></tr>` : rows.map((r) => {
+                  const isEgpOp = r.kind === 'egp_send' || r.kind === 'egp_recv';
+                  const isBoxOrPlat = r.kind === 'platform_update' || r.kind === 'quick_box_update';
+                  const absUsdt = Math.abs(parseNum(r.usdtDelta));
+                  let calcDetails = '';
+                  if (isEgpOp) {
+                    const rateVal = parseNum(r.rate);
+                    calcDetails = `<span class="font-bold text-slate-200">${fmt(r.amountInput, 2)} ج.م</span> <span class="text-amber-300 font-bold">÷ ${fmt(rateVal, 2)}</span> = <span class="font-extrabold ${parseNum(r.usdtDelta) >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${fmt(absUsdt, 2)} USDT</span>`;
+                  } else if (isBoxOrPlat) {
+                    calcDetails = `<span class="text-teal-300 font-bold">${r.note || `تحديث إلى ${fmt(r.amountInput, 2)} USDT`}</span>`;
+                  } else {
+                    calcDetails = `<span class="font-extrabold ${parseNum(r.usdtDelta) >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${fmt(r.usdtDelta, 2)} USDT</span> (حركة مباشرة)`;
+                  }
+
+                  let beforeAfterHtml = '-';
+                  if (isBoxOrPlat && r.balanceBefore !== undefined) {
+                    beforeAfterHtml = `كان <span class="text-slate-300">${fmt(r.balanceBefore, 2)}</span> ← أصبح <span class="font-extrabold text-teal-300">${fmt(r.balanceAfter, 2)} USDT</span>`;
+                  } else if (r.netBefore !== undefined && r.netAfter !== undefined) {
+                    beforeAfterHtml = `كان <span class="text-slate-300">${fmt(r.netBefore, 2)}</span> ← أصبح <span class="font-extrabold text-sky-300">${fmt(r.netAfter, 2)} USDT</span>`;
+                  } else if (r.netAfter !== undefined) {
+                    beforeAfterHtml = `أصبح <span class="font-extrabold text-sky-300">${fmt(r.netAfter, 2)} USDT</span>`;
+                  }
+
+                  const canEdit = !isBoxOrPlat;
+                  return `
+                    <tr class="border-b border-slate-800/80">
+                      <td class="py-2 px-2 whitespace-nowrap">${r.fullTime}</td>
+                      <td class="py-2 px-2 font-bold">${r.clientName}</td>
+                      <td class="py-2 px-2">${kindLabel[r.kind] || r.kind}</td>
+                      <td class="py-2 px-2">${calcDetails}</td>
+                      <td class="py-2 px-2">${beforeAfterHtml}</td>
+                      <td class="py-2 px-2 whitespace-nowrap space-x-1 space-x-reverse no-print">
+                        ${canEdit ? `<button type="button" onclick="window.openEditTx('usdt', '${r.id}')" class="bg-amber-500/20 text-amber-300 px-2 py-1 rounded">تعديل</button>` : ''}
+                        <button type="button" onclick="window.openDeleteTx('usdt', '${r.id}')" class="bg-rose-500/20 text-rose-300 px-2 py-1 rounded">حذف</button>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
               </tbody>
             </table>
           `;
@@ -4217,6 +4382,7 @@
         const fileName = q ? `كشف_حساب_${q.replace(/\s+/g, '_')}.pdf` : `كشف_حساب_P2P.pdf`;
 
         if (typeof html2pdf !== 'undefined') {
+          el.classList.add('pdf-exporting');
           const opt = {
             margin: 8,
             filename: fileName,
@@ -4225,8 +4391,10 @@
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
           };
           html2pdf().set(opt).from(el).save().then(() => {
+            el.classList.remove('pdf-exporting');
             showToast(`تم تصدير ملف PDF: ${fileName}`);
           }).catch(() => {
+            el.classList.remove('pdf-exporting');
             window.print();
           });
         } else {
