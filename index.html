@@ -277,6 +277,22 @@
 
     <!-- 1. DASHBOARD PAGE -->
     <section id="page-dashboard" class="page-section space-y-4">
+      <div id="archive18mReminderBanner" class="hidden glass-card p-3.5 border border-amber-400/50 bg-amber-950/25 flex flex-wrap items-center justify-between gap-2">
+        <div class="text-xs text-amber-200 leading-relaxed">
+          <strong class="text-amber-300 font-extrabold">🔔 تنبيه دورة الـ 18 شهراً:</strong> حان وقت أرشفة أقدم 12 شهراً في ملف مرجعي منفصل والإبقاء على أحدث 6 شهور داخل المنظومة.
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="window.navigateTo('management')"
+            class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-3 py-1.5 rounded-xl text-xs">
+            الانتقال للأرشفة
+          </button>
+          <button type="button" onclick="window.snooze18mReminder()"
+            class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 font-bold px-2.5 py-1.5 rounded-xl text-xs">
+            تأجيل مؤقت
+          </button>
+        </div>
+      </div>
+
       <div class="glass-card p-4 sm:p-5">
         <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
           <div>
@@ -502,6 +518,60 @@
                 <button type="button" onclick="window.clearManualExpenses()"
                   class="bg-slate-700 hover:bg-slate-600 text-white font-bold px-3 py-2 rounded-xl text-xs">
                   تصفير الخانات الـ ٣
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- Capital / Investment / Project Outflow Box (Single Box, Tracking Only) -->
+        <div class="soft-box p-3.5 mt-3 border border-indigo-500/35 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div class="text-sm font-extrabold text-indigo-300">💎 مسحوبات استثمار / مشروع / خارج المنظومة (للتتبع فقط)</div>
+              <div class="text-[11px] text-slate-400">
+                خانة مستقلة للمبالغ الكبيرة أو الاستثمارات (مثل شراء ذهب أو مشروع) لفصلها عن المصاريف اليومية؛ للتتبع والترحيل فقط دون التأثير على معادلة الربح.
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 text-xs font-extrabold">
+              <span class="text-indigo-300 bg-indigo-500/10 border border-indigo-500/25 px-2.5 py-1 rounded-xl">
+                حالية: <span id="dashCapOutCurrentDisplay">0.00</span> ج.م
+              </span>
+              <span class="text-sky-300 bg-sky-500/10 border border-sky-500/25 px-2.5 py-1 rounded-xl">
+                شهرية: <span id="dashCapOutMonthlyDisplay">0.00</span> ج.م
+              </span>
+              <span class="text-purple-300 bg-purple-500/10 border border-purple-500/25 px-2.5 py-1 rounded-xl">
+                إجمالي: <span id="dashCapOutTotalDisplay">0.00</span> ج.م
+              </span>
+            </div>
+          </div>
+
+          <form onsubmit="window.saveCapitalOutflow(event)" class="space-y-2.5">
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+              <div class="sm:col-span-6">
+                <input id="capOutNameInput" type="text" placeholder="البيان / السبب (مثال: شراء ذهب أو تمويل مشروع)..."
+                  class="w-full px-3 py-2 text-xs font-bold text-slate-200" />
+              </div>
+              <div class="sm:col-span-6">
+                <input id="capOutAmountInput" type="text" inputmode="decimal" enterkeyhint="done"
+                  placeholder="المبلغ الخارج (ج.م)..."
+                  class="w-full px-3 py-2 text-xs font-bold text-indigo-300" />
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <button type="button" onclick="window.navigateTo('archive'); window.setArchiveTab('cap_outflows');"
+                class="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-indigo-300 font-bold px-3 py-2 rounded-xl text-xs">
+                🗂️ عرض سجل الاستثمارات والمسحوبات الكبيرة
+              </button>
+              <div class="flex items-center gap-2">
+                <button type="submit"
+                  class="bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold px-4 py-2 rounded-xl text-xs shadow">
+                  حفظ الخروج / الاستثمار
+                </button>
+                <button type="button" onclick="window.clearCapitalOutflow()"
+                  class="bg-slate-700 hover:bg-slate-600 text-white font-bold px-3 py-2 rounded-xl text-xs">
+                  تصفير الخانة
                 </button>
               </div>
             </div>
@@ -864,6 +934,25 @@
           </div>
         </div>
 
+        <!-- 18-Month Archive & Reset Card (Keep Newest 6 Months, Export Oldest 12 Months as Reference JSON) -->
+        <div class="soft-box p-4 border border-amber-500/35 bg-amber-950/15 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div class="text-sm font-extrabold text-amber-300">📦 أرشفة دورية كل 18 شهراً (تصدير أقدم 12 شهراً كملف مرجعي وإبقاء آخر 6 شهور)</div>
+              <p id="archive18mStatusText" class="text-xs text-slate-400 mt-0.5">
+                يحفظ أقدم 12 شهراً من السجلات في ملف JSON مرجعي منفصل ثم يصفّرها مع إبقاء أحدث 6 شهور دون المساس بالأرصدة أو الأرباح الحالية.
+              </p>
+            </div>
+            <button type="button" onclick="window.run18MonthArchiveAndReset()"
+              class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-4 py-2.5 rounded-xl text-xs shadow cursor-pointer">
+              📦 أرشفة وتصفير (12 شهر مرجع / 6 شهور باقية)
+            </button>
+          </div>
+          <div class="text-[11px] text-slate-300 bg-slate-900/80 border border-slate-800 rounded-xl p-2.5">
+            💡 <strong class="text-sky-300">استرداد الملف المرجعي في أي نسخة أخرى:</strong> عند استيراد ملف الأرشيف المرجعي (<code class="text-amber-300">JSON</code>) من زر «استيراد ملف JSON» في أي نسخة أخرى، يُفتح في <strong>وضع المراجعة المرجعي</strong> للبحث والطباعة PDF دون تغيير أرصدة أو أرباح النسخة الأخرى.
+          </div>
+        </div>
+
         <!-- Password Change & Factory Reset -->
         <div class="soft-box p-4 border border-rose-500/35 bg-rose-950/15 space-y-3">
           <div class="flex flex-wrap items-center justify-between gap-2">
@@ -904,16 +993,24 @@
           </button>
         </div>
 
-        <!-- Direct Name / Keyword Search (No complex dropdown filter) -->
-        <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
-          <div class="sm:col-span-8">
+        <!-- Direct Name / Keyword Search + Date Range Filter (From .. To ..) -->
+        <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">
+          <div class="sm:col-span-6">
             <input id="archiveDirectSearch" type="text" oninput="window.renderArchivePage()"
               placeholder="ابحث مباشرة بالاسم أو رقم الشريحة أو المبلغ أو البيان في كامل الأرشيف..."
               class="w-full px-3.5 py-2.5 text-sm font-semibold" />
           </div>
-          <div class="sm:col-span-4">
-            <input id="archiveDateFilter" type="date" onchange="window.renderArchivePage()"
-              class="w-full px-3.5 py-2.5 text-sm" />
+          <div class="sm:col-span-6 flex flex-wrap sm:flex-nowrap items-center gap-1.5">
+            <span class="text-xs font-bold text-slate-400 shrink-0">من</span>
+            <input id="archiveDateFrom" type="date" onchange="window.renderArchivePage()"
+              class="w-full px-2.5 py-2 text-xs font-bold" />
+            <span class="text-xs font-bold text-slate-400 shrink-0">إلى</span>
+            <input id="archiveDateTo" type="date" onchange="window.renderArchivePage()"
+              class="w-full px-2.5 py-2 text-xs font-bold" />
+            <button type="button" onclick="window.clearArchiveDateRange()"
+              class="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-amber-300 font-bold px-2.5 py-2 rounded-xl text-xs shrink-0">
+              ✕
+            </button>
           </div>
         </div>
 
@@ -942,6 +1039,19 @@
           <button type="button" data-archtab="expenses" onclick="window.setArchiveTab('expenses')"
             class="arch-tab px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300">
             سجل المصاريف
+          </button>
+          <button type="button" data-archtab="cap_outflows" onclick="window.setArchiveTab('cap_outflows')"
+            class="arch-tab px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300">
+            سجل الاستثمار والمشاريع
+          </button>
+        </div>
+
+        <!-- Reference Archive Viewing Banner (Shown only when viewing an imported 12-month reference archive) -->
+        <div id="referenceArchiveBanner" class="hidden bg-sky-950/35 border border-sky-400/50 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2">
+          <div id="referenceArchiveBannerText" class="text-xs text-sky-200 font-bold"></div>
+          <button type="button" onclick="window.exitReferenceArchiveMode()"
+            class="bg-sky-600 hover:bg-sky-500 text-white font-extrabold px-3 py-1.5 rounded-xl text-xs cursor-pointer">
+            ↩ العودة للأرشيف الأساسي
           </button>
         </div>
 
@@ -1544,6 +1654,9 @@
           showClosedSims: false,
           resetPassword: '1234',
           updatedAt: 0,
+          cycleAnchorAt: 0,
+          lastArchive18mAt: 0,
+          snooze18mUntil: 0,
 
           // Dashboard valuation rate & profits
           dashboardUsdtRate: 50.0,
@@ -1561,6 +1674,9 @@
           ],
           monthlyExpenses: 0,
           totalExpenses: 0,
+          capitalOutflow: { name: '', amount: 0 },
+          monthlyCapitalOutflow: 0,
+          totalCapitalOutflow: 0,
           dailyProfit: 0,
           monthlyProfit: 0,
           totalProfit: 0,
@@ -1593,7 +1709,8 @@
             usdt: [],
             approvals: [],
             months: [],
-            expenses: []
+            expenses: [],
+            cap_outflows: []
           }
         };
       }
@@ -1635,6 +1752,7 @@
         merged.logs.approvals = Array.isArray(merged.logs.approvals) ? merged.logs.approvals : [];
         merged.logs.months = Array.isArray(merged.logs.months) ? merged.logs.months : [];
         merged.logs.expenses = Array.isArray(merged.logs.expenses) ? merged.logs.expenses : [];
+        merged.logs.cap_outflows = Array.isArray(merged.logs.cap_outflows) ? merged.logs.cap_outflows : [];
         const rawBoxes = Array.isArray(merged.manualExpenseBoxes) ? merged.manualExpenseBoxes : [];
         const defaultNames = ['خانة مصاريف 1', 'خانة مصاريف 2', 'خانة مصاريف 3'];
         merged.manualExpenseBoxes = [0, 1, 2].map((i) => {
@@ -1648,6 +1766,13 @@
         merged.manualExpenses = merged.manualExpenseBoxes.reduce((s, b) => s + parseNum(b.amount), 0);
         merged.monthlyExpenses = Math.max(0, parseNum(merged.monthlyExpenses ?? 0));
         merged.totalExpenses = Math.max(0, parseNum(merged.totalExpenses ?? 0));
+        const rawCapOut = (merged.capitalOutflow && typeof merged.capitalOutflow === 'object') ? merged.capitalOutflow : {};
+        merged.capitalOutflow = {
+          name: (rawCapOut.name || '').trim(),
+          amount: Math.max(0, parseNum(rawCapOut.amount ?? 0))
+        };
+        merged.monthlyCapitalOutflow = Math.max(0, parseNum(merged.monthlyCapitalOutflow ?? 0));
+        merged.totalCapitalOutflow = Math.max(0, parseNum(merged.totalCapitalOutflow ?? 0));
         merged.usdtBatches = Array.isArray(merged.usdtBatches)
           ? merged.usdtBatches.map((b) => ({
               id: b.id || uid('ubatch'),
@@ -1674,6 +1799,27 @@
           monthlySend: s.monthlySend ?? 0,
           ...s
         }));
+        const earliestLogMs = (() => {
+          const allLogs = [
+            ...(merged.logs.lines || []),
+            ...(merged.logs.egp || []),
+            ...(merged.logs.usdt || []),
+            ...(merged.logs.approvals || []),
+            ...(merged.logs.months || []),
+            ...(merged.logs.expenses || []),
+            ...(merged.logs.cap_outflows || [])
+          ];
+          let minTs = Infinity;
+          allLogs.forEach((item) => {
+            if (!item || !item.dateStr) return;
+            const parsed = Date.parse(`${item.dateStr}T00:00:00`);
+            if (Number.isFinite(parsed) && parsed < minTs) minTs = parsed;
+          });
+          return Number.isFinite(minTs) ? minTs : 0;
+        })();
+        merged.cycleAnchorAt = Math.max(0, parseNum(merged.cycleAnchorAt || merged.lastArchive18mAt || earliestLogMs || 0));
+        merged.lastArchive18mAt = Math.max(0, parseNum(merged.lastArchive18mAt ?? 0));
+        merged.snooze18mUntil = Math.max(0, parseNum(merged.snooze18mUntil ?? 0));
         return merged;
       }
 
@@ -1893,6 +2039,9 @@
           manualExpenseBoxes: JSON.parse(JSON.stringify(state.manualExpenseBoxes || [])),
           monthlyExpenses: state.monthlyExpenses,
           totalExpenses: state.totalExpenses,
+          capitalOutflow: JSON.parse(JSON.stringify(state.capitalOutflow || { name: '', amount: 0 })),
+          monthlyCapitalOutflow: state.monthlyCapitalOutflow,
+          totalCapitalOutflow: state.totalCapitalOutflow,
           dailyProfit: state.dailyProfit,
           monthlyProfit: state.monthlyProfit,
           totalProfit: state.totalProfit,
@@ -2170,7 +2319,8 @@
         document.getElementById('dashPrevCapital').textContent = unlocked ? `الصافي السابق: ${fmt(state.prevNetCapital)}` : 'الصافي السابق: ••••';
 
         const manExpLive = syncManualExpensesSum();
-        const liveProfit = (fin.netCapital + manExpLive) - parseNum(state.prevNetCapital);
+        const capOutLive = Math.max(0, parseNum(state.capitalOutflow?.amount));
+        const liveProfit = (fin.netCapital + manExpLive + capOutLive) - parseNum(state.prevNetCapital);
         document.getElementById('dashDailyProfit').textContent = unlocked ? fmt(liveProfit) : '••••';
         const dailySubEl = document.getElementById('dashDailyProfitSub');
         if (dailySubEl) {
@@ -2280,6 +2430,19 @@
           if (nInp && document.activeElement !== nInp) nInp.value = b.name || `خانة مصاريف ${i + 1}`;
           if (aInp && document.activeElement !== aInp) aInp.value = parseNum(b.amount) ? String(parseNum(b.amount)) : '';
         }
+
+        const capObj = state.capitalOutflow || { name: '', amount: 0 };
+        const capCurAmt = Math.max(0, parseNum(capObj.amount));
+        const capCurDisp = document.getElementById('dashCapOutCurrentDisplay');
+        if (capCurDisp) capCurDisp.textContent = fmt(capCurAmt);
+        const capMonDisp = document.getElementById('dashCapOutMonthlyDisplay');
+        if (capMonDisp) capMonDisp.textContent = fmt(parseNum(state.monthlyCapitalOutflow));
+        const capTotDisp = document.getElementById('dashCapOutTotalDisplay');
+        if (capTotDisp) capTotDisp.textContent = fmt(parseNum(state.totalCapitalOutflow));
+        const capNameInp = document.getElementById('capOutNameInput');
+        const capAmtInp = document.getElementById('capOutAmountInput');
+        if (capNameInp && document.activeElement !== capNameInp) capNameInp.value = capObj.name || '';
+        if (capAmtInp && document.activeElement !== capAmtInp) capAmtInp.value = capCurAmt ? String(capCurAmt) : '';
       }
 
       window.openInitialSetupModal = function () {
@@ -2383,6 +2546,27 @@
         showToast('تم تصفير خانات المصاريف اليدوية الثلاث');
       };
 
+      window.saveCapitalOutflow = function (e) {
+        e.preventDefault();
+        pushUndoStep('تعديل مسحوبات الاستثمار/المشاريع');
+        const nameEl = document.getElementById('capOutNameInput');
+        const amtEl = document.getElementById('capOutAmountInput');
+        const noteName = (nameEl?.value || '').trim() || 'استثمار / مشروع خارجي';
+        const amount = Math.max(0, parseNum(amtEl?.value));
+        state.capitalOutflow = { name: noteName, amount };
+        saveState();
+        renderDashboard();
+        showToast(`تم حفظ مسحوبات الاستثمار/المشاريع: ${fmt(amount)} ج.م`);
+      };
+
+      window.clearCapitalOutflow = function () {
+        pushUndoStep('تصفير خانة الاستثمار/المشاريع');
+        state.capitalOutflow = { name: '', amount: 0 };
+        saveState();
+        renderDashboard();
+        showToast('تم تصفير خانة مسحوبات الاستثمار/المشاريع');
+      };
+
       window.saveDashboardRate = function (e) {
         e.preventDefault();
         pushUndoStep('تعديل سعر تقييم USDT');
@@ -2483,11 +2667,12 @@
         pushUndoStep('اعتماد الفترة');
         const fin = computeFinancials();
         const manExp = syncManualExpensesSum();
+        const capOutAmt = Math.max(0, parseNum(state.capitalOutflow?.amount));
         const boxesSnapshot = (Array.isArray(state.manualExpenseBoxes) ? state.manualExpenseBoxes : []).map((b) => ({
           name: b.name,
           amount: Math.max(0, parseNum(b.amount))
         }));
-        const profit = (fin.netCapital + manExp) - parseNum(state.prevNetCapital);
+        const profit = (fin.netCapital + manExp + capOutAmt) - parseNum(state.prevNetCapital);
         state.dailyProfit = profit;
         state.monthlyProfit = parseNum(state.monthlyProfit) + profit;
         state.monthlyExpenses = parseNum(state.monthlyExpenses) + manExp;
@@ -2522,6 +2707,23 @@
           });
         }
 
+// capOutAmt already read above for profit calculation
+        const capOutName = (state.capitalOutflow?.name || '').trim() || 'استثمار / مشروع خارجي';
+        if (!Array.isArray(state.logs.cap_outflows)) state.logs.cap_outflows = [];
+        if (capOutAmt > 0) {
+          state.monthlyCapitalOutflow = parseNum(state.monthlyCapitalOutflow) + capOutAmt;
+          state.logs.cap_outflows.unshift({
+            id: uid('capout'),
+            name: capOutName,
+            amount: capOutAmt,
+            monthlyAfter: state.monthlyCapitalOutflow,
+            totalAfter: state.totalCapitalOutflow,
+            dateStr: stamp.dateStr,
+            fullTime: stamp.full
+          });
+        }
+        state.capitalOutflow = { name: '', amount: 0 };
+
         state.usdtPrevAvgRate = fin.rate;
         state.usdtApprovedQty = Math.max(0, fin.usdtTotalNet);
         state.usdtApprovedRate = fin.rate;
@@ -2550,10 +2752,13 @@
         pushUndoStep('إقفال الشهر');
         const added = parseNum(state.monthlyProfit);
         const addedExpenses = parseNum(state.monthlyExpenses);
+        const addedCapOut = parseNum(state.monthlyCapitalOutflow);
         state.totalProfit = parseNum(state.totalProfit) + added;
         state.totalExpenses = parseNum(state.totalExpenses) + addedExpenses;
+        state.totalCapitalOutflow = parseNum(state.totalCapitalOutflow) + addedCapOut;
         state.monthlyProfit = 0;
         state.monthlyExpenses = 0;
+        state.monthlyCapitalOutflow = 0;
 
         const stamp = nowStamp();
         state.logs.months.unshift({
@@ -4278,7 +4483,23 @@
         document.getElementById('deleteConfirmModal').classList.add('open');
       };
 
-      function buildArchiveSummaryCard(q, dateVal) {
+      function isDateInRange(itemDate, dateFrom, dateTo) {
+        if (!dateFrom && !dateTo) return true;
+        if (!itemDate) return false;
+        if (dateFrom && itemDate < dateFrom) return false;
+        if (dateTo && itemDate > dateTo) return false;
+        return true;
+      }
+
+      window.clearArchiveDateRange = function () {
+        const fEl = document.getElementById('archiveDateFrom');
+        const tEl = document.getElementById('archiveDateTo');
+        if (fEl) fEl.value = '';
+        if (tEl) tEl.value = '';
+        renderArchivePage();
+      };
+
+      function buildArchiveSummaryCard(q, dateFrom, dateTo) {
         if (!q) return '';
         const egpMatches = state.egpClients.filter((c) => c.name.toLowerCase().includes(q));
         const usdtMatches = state.usdtClients.filter((c) => c.name.toLowerCase().includes(q));
@@ -4287,9 +4508,10 @@
           return `${s.label} ${s.phone} ${dev ? dev.name : ''}`.toLowerCase().includes(q);
         });
 
-        const egpTxs = state.logs.egp.filter((r) => `${r.clientName} ${r.note || ''}`.toLowerCase().includes(q) && (!dateVal || r.dateStr === dateVal));
-        const usdtTxs = state.logs.usdt.filter((r) => `${r.clientName}`.toLowerCase().includes(q) && (!dateVal || r.dateStr === dateVal));
-        const lineTxs = state.logs.lines.filter((r) => `${r.deviceName} ${r.simLabel} ${r.simPhone}`.toLowerCase().includes(q) && (!dateVal || r.dateStr === dateVal));
+        const activeLogs = referenceArchiveView ? referenceArchiveView.logs : state.logs;
+        const egpTxs = activeLogs.egp.filter((r) => `${r.clientName} ${r.note || ''}`.toLowerCase().includes(q) && isDateInRange(r.dateStr, dateFrom, dateTo));
+        const usdtTxs = activeLogs.usdt.filter((r) => `${r.clientName}`.toLowerCase().includes(q) && isDateInRange(r.dateStr, dateFrom, dateTo));
+        const lineTxs = activeLogs.lines.filter((r) => `${r.deviceName} ${r.simLabel} ${r.simPhone}`.toLowerCase().includes(q) && isDateInRange(r.dateStr, dateFrom, dateTo));
 
         const egpLiSum = egpTxs.filter((x) => x.side === 'li').reduce((a, b) => a + parseNum(b.amount), 0);
         const egpAlaySum = egpTxs.filter((x) => x.side === 'alay').reduce((a, b) => a + parseNum(b.amount), 0);
@@ -4356,7 +4578,13 @@
 
       function renderArchivePage() {
         const q = (document.getElementById('archiveDirectSearch')?.value || '').trim().toLowerCase();
-        const dateVal = (document.getElementById('archiveDateFilter')?.value || '').trim();
+        let dateFrom = (document.getElementById('archiveDateFrom')?.value || '').trim();
+        let dateTo = (document.getElementById('archiveDateTo')?.value || '').trim();
+        if (dateFrom && dateTo && dateFrom > dateTo) {
+          const tmp = dateFrom;
+          dateFrom = dateTo;
+          dateTo = tmp;
+        }
         const wrapper = document.getElementById('archiveTableWrapper');
         const titleEl = document.getElementById('statementHeaderTitle');
         const metaEl = document.getElementById('statementSubMeta');
@@ -4365,14 +4593,14 @@
 
         const matchItem = (textBlob, itemDate) => {
           const okQ = !q || textBlob.toLowerCase().includes(q);
-          const okD = !dateVal || itemDate === dateVal;
+          const okD = isDateInRange(itemDate, dateFrom, dateTo);
           return okQ && okD;
         };
 
         if (q) {
           const lineMatches = state.logs.lines.filter((r) => matchItem(`${r.deviceName} ${r.simLabel} ${r.simPhone} ${r.amount} ${r.type}`, r.dateStr));
-          const egpMatches = state.logs.egp.filter((r) => matchItem(`${r.clientName} ${r.amount} ${r.note || ''} ${r.side}`, r.dateStr));
-          const usdtMatches = state.logs.usdt.filter((r) => matchItem(`${r.clientName} ${r.kind} ${r.amountInput} ${r.usdtDelta}`, r.dateStr));
+          const egpMatches = activeLogs.egp.filter((r) => matchItem(`${r.clientName} ${r.amount} ${r.note || ''} ${r.side}`, r.dateStr));
+          const usdtMatches = activeLogs.usdt.filter((r) => matchItem(`${r.clientName} ${r.kind} ${r.amountInput} ${r.usdtDelta}`, r.dateStr));
 
           const countMap = { lines: lineMatches.length, egp: egpMatches.length, usdt: usdtMatches.length };
           if ((state.archiveTab === 'lines' || state.archiveTab === 'egp' || state.archiveTab === 'usdt') && countMap[state.archiveTab] === 0) {
@@ -4388,11 +4616,39 @@
           }
         }
 
-        const summaryBlockHtml = buildArchiveSummaryCard(q, dateVal);
+        const activeLogs = referenceArchiveView ? referenceArchiveView.logs : state.logs;
+        const refBannerEl = document.getElementById('referenceArchiveBanner');
+        const refBannerTxt = document.getElementById('referenceArchiveBannerText');
+        if (refBannerEl) {
+          refBannerEl.classList.toggle('hidden', !referenceArchiveView);
+          if (referenceArchiveView && refBannerTxt) {
+            refBannerTxt.textContent = `📚 وضع الأرشيف المرجعي (${referenceArchiveView.fileName}) • تاريخ التصدير: ${referenceArchiveView.exportedAt} • مرجعي فقط دون التأثير على أرصدة أو أرباح هذه النسخة`;
+          }
+        }
+
+        if (q) {
+          const lineMatches = activeLogs.lines.filter((r) => matchItem(`${r.deviceName} ${r.simLabel} ${r.simPhone} ${r.amount} ${r.type}`, r.dateStr));
+          const egpMatches = activeLogs.egp.filter((r) => matchItem(`${r.clientName} ${r.amount} ${r.note || ''} ${r.side}`, r.dateStr));
+          const usdtMatches = activeLogs.usdt.filter((r) => matchItem(`${r.clientName} ${r.kind} ${r.amountInput} ${r.usdtDelta}`, r.dateStr));
+          const countMap = { lines: lineMatches.length, egp: egpMatches.length, usdt: usdtMatches.length };
+          if ((state.archiveTab === 'lines' || state.archiveTab === 'egp' || state.archiveTab === 'usdt') && countMap[state.archiveTab] === 0) {
+            if (egpMatches.length > 0) state.archiveTab = 'egp';
+            else if (usdtMatches.length > 0) state.archiveTab = 'usdt';
+            else if (lineMatches.length > 0) state.archiveTab = 'lines';
+            document.querySelectorAll('.arch-tab').forEach((b) => {
+              const active = b.getAttribute('data-archtab') === state.archiveTab;
+              b.className = active
+                ? 'arch-tab px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500 text-slate-950'
+                : 'arch-tab px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300';
+            });
+          }
+        }
+
+        const summaryBlockHtml = buildArchiveSummaryCard(q, dateFrom, dateTo);
         const tab = state.archiveTab;
 
         if (tab === 'lines') {
-          const rows = state.logs.lines.filter((r) =>
+          const rows = activeLogs.lines.filter((r) =>
             matchItem(`${r.deviceName} ${r.simLabel} ${r.simPhone} ${r.amount} ${r.type}`, r.dateStr)
           );
           titleEl.textContent = q ? `كشف حركات الخطوط — بحث: "${q}"` : 'سجل حركات الخطوط (استلام / إرسال)';
@@ -4431,7 +4687,7 @@
             </table>
           `;
         } else if (tab === 'egp') {
-          const rows = state.logs.egp.filter((r) =>
+          const rows = activeLogs.egp.filter((r) =>
             matchItem(`${r.clientName} ${r.amount} ${r.note || ''} ${r.side}`, r.dateStr)
           );
           const matchedClient = q ? state.egpClients.find((c) => c.name.toLowerCase().includes(q)) : null;
@@ -4480,7 +4736,7 @@
             </table>
           `;
         } else if (tab === 'usdt') {
-          const rows = state.logs.usdt.filter((r) =>
+          const rows = activeLogs.usdt.filter((r) =>
             matchItem(`${r.clientName} ${r.kind} ${r.amountInput} ${r.usdtDelta} ${r.rate || ''} ${r.note || ''}`, r.dateStr)
           );
           const matchedUsdtClient = q ? state.usdtClients.find((c) => c.name.toLowerCase().includes(q)) : null;
@@ -4553,7 +4809,7 @@
             </table>
           `;
         } else if (tab === 'approvals') {
-          const rows = state.logs.approvals.filter((r) =>
+          const rows = activeLogs.approvals.filter((r) =>
             matchItem(`${r.prevNet} ${r.newNet} ${r.profit} ${r.dateStr}`, r.dateStr)
           );
           titleEl.textContent = 'سجل الاعتمادات والربح (كان كام وبقى كام)';
@@ -4587,7 +4843,7 @@
             </table>
           `;
         } else if (tab === 'months') {
-          const rows = state.logs.months.filter((r) =>
+          const rows = activeLogs.months.filter((r) =>
             matchItem(`${r.label} ${r.monthlyProfitAdded} ${r.totalProfitAfter}`, r.dateStr)
           );
           titleEl.textContent = 'الأرشيف الشهري وإقفال الشهور';
@@ -4618,8 +4874,35 @@
               </tbody>
             </table>
           `;
+        } else if (tab === 'cap_outflows') {
+          const capList = Array.isArray(activeLogs.cap_outflows) ? activeLogs.cap_outflows : [];
+          const rows = capList.filter((r) => matchItem(`${r.name || ''} ${r.amount}`, r.dateStr));
+          titleEl.textContent = 'سجل مسحوبات الاستثمار والمشاريع (للتتبع فقط)';
+          metaEl.textContent = `إجمالي الشهر الحالي: ${fmt(state.monthlyCapitalOutflow)} ج.م | الإجمالي التراكمي: ${fmt(state.totalCapitalOutflow)} ج.م`;
+          badgeEl.textContent = `الشهر: ${fmt(state.monthlyCapitalOutflow)} | الإجمالي: ${fmt(state.totalCapitalOutflow)}`;
+
+          wrapper.innerHTML = summaryBlockHtml + `
+            <table class="w-full text-xs text-right border-collapse">
+              <thead>
+                <tr class="border-b border-slate-700 text-slate-400">
+                  <th class="py-2 px-2">الوقت</th>
+                  <th class="py-2 px-2">البيان / السبب</th>
+                  <th class="py-2 px-2">المبلغ</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.length === 0 ? `<tr><td colspan="3" class="py-5 text-center text-slate-400">لا توجد مسحوبات استثمار أو مشاريع مسجلة في السجل بعد</td></tr>` : rows.map((r) => `
+                  <tr class="border-b border-slate-800/80">
+                    <td class="py-2 px-2 whitespace-nowrap">${r.fullTime}</td>
+                    <td class="py-2 px-2 font-bold">${r.name || 'استثمار / مشروع خارجي'}</td>
+                    <td class="py-2 px-2 font-extrabold text-indigo-300">${fmt(r.amount)} ج.م</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          `;
         } else {
-          const expList = Array.isArray(state.logs.expenses) ? state.logs.expenses : [];
+          const expList = Array.isArray(activeLogs.expenses) ? activeLogs.expenses : [];
           const rows = expList.filter((r) => {
             const boxesTxt = (r.boxes || []).map((b) => `${b.name} ${b.amount}`).join(' ');
             return matchItem(`${r.totalAmount} ${boxesTxt}`, r.dateStr);
@@ -4699,6 +4982,163 @@
         showToast('تم تحميل النسخة الاحتياطية JSON');
       };
 
+      let referenceArchiveView = null; // { fileName, exportedAt, cutoffDate, logs }
+
+      const MS_PER_DAY = 24 * 60 * 60 * 1000;
+      const MONTHS_18_DAYS = Math.round(18 * 30.4375); // ~548 days
+      const MONTHS_6_DAYS = Math.round(6 * 30.4375);   // ~183 days
+
+      function get18mCycleInfo() {
+        const now = Date.now();
+        const anchor = parseNum(state.lastArchive18mAt || state.cycleAnchorAt || 0);
+        if (!anchor) {
+          return { isDue: false, elapsedDays: 0, remainingDays: MONTHS_18_DAYS, anchorDateStr: 'لم يبدأ العد بعد' };
+        }
+        const elapsedDays = Math.max(0, Math.floor((now - anchor) / MS_PER_DAY));
+        const remainingDays = Math.max(0, MONTHS_18_DAYS - elapsedDays);
+        const d = new Date(anchor);
+        const pad = (x) => String(x).padStart(2, '0');
+        const anchorDateStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+        const notSnoozed = now >= parseNum(state.snooze18mUntil || 0);
+        return {
+          isDue: elapsedDays >= MONTHS_18_DAYS && notSnoozed,
+          elapsedDays,
+          remainingDays,
+          anchorDateStr
+        };
+      }
+
+      window.snooze18mReminder = function () {
+        state.snooze18mUntil = Date.now() + (7 * MS_PER_DAY);
+        saveState();
+        render18mCycleUI();
+        showToast('تم تأجيل التنبيه لمدة 7 أيام');
+      };
+
+      function getLogItemDateMs(item) {
+        if (!item) return null;
+        if (item.dateStr) {
+          const ms = Date.parse(`${item.dateStr}T23:59:59`);
+          if (Number.isFinite(ms)) return ms;
+        }
+        if (item.fullTime) {
+          const part = String(item.fullTime).trim().split(' ')[0];
+          const ms = Date.parse(`${part}T23:59:59`);
+          if (Number.isFinite(ms)) return ms;
+        }
+        return null;
+      }
+
+      window.run18MonthArchiveAndReset = function () {
+        const logKeys = ['lines', 'egp', 'usdt', 'approvals', 'months', 'expenses', 'cap_outflows'];
+        let latestMs = Date.now();
+        logKeys.forEach((k) => {
+          const arr = Array.isArray(state.logs?.[k]) ? state.logs[k] : [];
+          arr.forEach((it) => {
+            const ms = getLogItemDateMs(it);
+            if (ms && ms > latestMs) latestMs = ms;
+          });
+        });
+
+        const sixMonthsCutoffMs = latestMs - (MONTHS_6_DAYS * MS_PER_DAY);
+
+        const archiveLogs = {};
+        const keptLogs = {};
+        let archivedCount = 0;
+        let keptCount = 0;
+
+        logKeys.forEach((k) => {
+          const arr = Array.isArray(state.logs?.[k]) ? state.logs[k] : [];
+          const refArr = [];
+          const keepArr = [];
+          arr.forEach((item) => {
+            const ms = getLogItemDateMs(item);
+            if (ms !== null && ms < sixMonthsCutoffMs) {
+              refArr.push(item);
+              archivedCount += 1;
+            } else {
+              keepArr.push(item);
+              keptCount += 1;
+            }
+          });
+          archiveLogs[k] = refArr;
+          keptLogs[k] = keepArr;
+        });
+
+        if (archivedCount === 0) {
+          showToast('لا توجد سجلات أقدم من 6 شهور لأرشفتها حالياً (يتم الإبقاء على أحدث 6 شهور)', 'warn');
+          return;
+        }
+
+        pushUndoStep('أرشفة أقدم 12 شهراً وإبقاء آخر 6 شهور');
+
+        const stamp = nowStamp();
+        const cutDate = new Date(sixMonthsCutoffMs);
+        const pad = (x) => String(x).padStart(2, '0');
+        const cutoffStr = `${cutDate.getFullYear()}-${pad(cutDate.getMonth() + 1)}-${pad(cutDate.getDate())}`;
+
+        const referencePackage = {
+          archiveType: 'p2p_12m_reference',
+          version: 'index_21',
+          exportedAt: stamp.full,
+          cutoffDateBeforeNewest6Months: cutoffStr,
+          archivedRecordsCount: archivedCount,
+          keptRecent6MonthsCount: keptCount,
+          logs: archiveLogs
+        };
+
+        try {
+          const blob = new Blob([JSON.stringify(referencePackage, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `p2p_archive_12m_${stamp.dateStr}.json`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+        } catch (err) {
+          showToast('تعذر تحميل ملف الأرشيف المرجعي؛ تم إيقاف التصفير لحماية بياناتك', 'err');
+          return;
+        }
+
+        logKeys.forEach((k) => {
+          state.logs[k] = keptLogs[k];
+        });
+        const nowTs = Date.now();
+        state.lastArchive18mAt = nowTs;
+        state.cycleAnchorAt = nowTs;
+        state.snooze18mUntil = 0;
+
+        saveState();
+        renderAll();
+        showToast(`تم تصدير (${archivedCount}) سجل مرجعي وإبقاء أحدث 6 شهور (${keptCount} سجل)`);
+      };
+
+      function render18mCycleUI() {
+        const info = get18mCycleInfo();
+        const banner = document.getElementById('archive18mReminderBanner');
+        if (banner) {
+          banner.classList.toggle('hidden', !info.isDue);
+        }
+        const statusEl = document.getElementById('archive18mStatusText');
+        if (statusEl) {
+          const lastArchTxt = state.lastArchive18mAt
+            ? `آخر أرشفة تمت: ${new Date(state.lastArchive18mAt).toISOString().slice(0, 10)}`
+            : (state.cycleAnchorAt ? `بداية الدورة الحالية: ${info.anchorDateStr}` : 'لم يبدأ العد بعد');
+          const cycleNote = state.cycleAnchorAt
+            ? ` • مضى ${info.elapsedDays} يوم من دورة 18 شهراً (~${MONTHS_18_DAYS} يوم)`
+            : '';
+          statusEl.textContent = `يصدّر أقدم 12 شهراً في ملف JSON مرجعي منفصل ويُبقي أحدث 6 شهور فقط دون المساس بالأرصدة أو الأرباح (${lastArchTxt}${cycleNote}).`;
+        }
+      }
+
+      window.exitReferenceArchiveMode = function () {
+        referenceArchiveView = null;
+        renderArchivePage();
+        showToast('تمت العودة للأرشيف الأساسي');
+      };
+
       window.importBackupJson = function (e) {
         const file = e.target.files && e.target.files[0];
         if (!file) return;
@@ -4706,6 +5146,27 @@
         reader.onload = function (ev) {
           try {
             const imported = JSON.parse(ev.target.result);
+            if (imported && imported.archiveType === 'p2p_12m_reference' && imported.logs && typeof imported.logs === 'object') {
+              referenceArchiveView = {
+                fileName: file.name,
+                exportedAt: imported.exportedAt || 'غير محدد',
+                cutoffDate: imported.cutoffDateBeforeNewest6Months || '',
+                logs: {
+                  lines: Array.isArray(imported.logs.lines) ? imported.logs.lines : [],
+                  egp: Array.isArray(imported.logs.egp) ? imported.logs.egp : [],
+                  usdt: Array.isArray(imported.logs.usdt) ? imported.logs.usdt : [],
+                  approvals: Array.isArray(imported.logs.approvals) ? imported.logs.approvals : [],
+                  months: Array.isArray(imported.logs.months) ? imported.logs.months : [],
+                  expenses: Array.isArray(imported.logs.expenses) ? imported.logs.expenses : [],
+                  cap_outflows: Array.isArray(imported.logs.cap_outflows) ? imported.logs.cap_outflows : []
+                }
+              };
+              renderAll();
+              window.navigateTo('archive');
+              showToast('تم فتح ملف الأرشيف المرجعي (12 شهراً) في وضع المراجعة دون تغيير أرصدة أو أرباح النسخة الحالية');
+              return;
+            }
+            referenceArchiveView = null;
             state = normalizeLoadedState(imported);
             saveState();
             renderAll();
@@ -4768,6 +5229,7 @@
         renderEgpPage();
         renderUsdtPage();
         renderManagementPage();
+        render18mCycleUI();
         renderArchivePage();
       }
 
